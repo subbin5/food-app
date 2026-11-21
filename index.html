@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>유통기한</title>
+
+  <!-- 아이폰 홈 화면 앱 설정 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="유통기한">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#f1f8f4">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    :root {
+      --bg: #f1f8f4;
+      --card: #ffffff;
+      --main: #4caf8a;
+      --main-dark: #3a9374;
+      --text: #2f3e38;
+      --sub: #6b7f76;
+      --line: #d5e8de;
+      --error-bg: #fdecec;
+      --error: #c0504d;
+      --ok-bg: #e4f5ec;
+      --ok: #2e7d5b;
+      --warn-bg: #fff3df;
+      --warn: #b7791f;
+      --red: #e53935;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      padding: 20px 16px;
+      padding-top: max(20px, env(safe-area-inset-top));
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    }
+    .wrap { max-width: 420px; margin: 0 auto; }
+
+    /* 위쪽 탭 (입력 | 목록) */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 6px;
+      margin-bottom: 16px;
+      background: #fff;
+      border-radius: 999px;
+      box-shadow: 0 4px 14px rgba(76, 175, 138, 0.12);
+    }
+    .tab {
+      flex: 1;
+      padding: 11px;
+      font-size: 16px;
+      font-weight: bold;
+      color: var(--sub);
+      background: transparent;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .tab:hover { background: #f1f8f4; }
+    .tab.active { color: #fff; background: var(--main); }
+
+    /* 옆으로 넘어가는 칸 */
+    .slider {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      align-items: flex-start;
+    }
+    .slider::-webkit-scrollbar { display: none; }
+    .panel {
+      flex: 0 0 100%;
+      scroll-snap-align: start;
+      padding: 4px 4px 24px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 28px;
+      padding: 28px 24px;
+      box-shadow: 0 8px 24px rgba(76, 175, 138, 0.15);
+    }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .desc { margin: 0 0 8px; color: var(--sub); font-size: 14px; }
+    label { display: block; margin-top: 20px; font-weight: bold; font-size: 15px; }
+    .req {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--ok-bg);
+      color: var(--ok);
+      font-size: 12px;
+      font-weight: normal;
+    }
+    .req.opt { background: #eef2f0; color: var(--sub); }
+    input {
+      width: 100%;
+      margin-top: 8px;
+      padding: 14px 16px;
+      font-size: 16px;
+      color: var(--text);
+      background: #fafdfb;
+      border: 2px solid var(--line);
+      border-radius: 16px;
+      outline: none;
+    }
+    input:focus { border-color: var(--main); background: #fff; }
+    #saveBtn {
+      width: 100%;
+      margin-top: 28px;
+      padding: 15px;
+      font-size: 17px;
+      font-weight: bold;
+      color: #fff;
+      background: var(--main);
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    #saveBtn:hover { background: var(--main-dark); }
+    #saveBtn:disabled { background: #a9d4c3; cursor: default; }
+    .msg {
+      margin-top: 18px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 15px;
+      display: none;
+    }
+    .msg.error { display: block; background: var(--error-bg); color: var(--error); }
+    .msg.success { display: block; background: var(--ok-bg); color: var(--ok); }
+    .hint { margin: 16px 0 0; text-align: center; color: var(--sub); font-size: 13px; }
+
+    /* 칼로리 검색 */
+    .cal-row { display: flex; gap: 8px; margin-top: 8px; }
+    .cal-row input { margin-top: 0; flex: 1; min-width: 0; }
+    #calBtn {
+      flex-shrink: 0;
+      padding: 0 16px;
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--ok);
+      background: var(--ok-bg);
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+    }
+    #calBtn:disabled { opacity: 0.5; cursor: default; }
+    #calResults {
+      display: none;
+      margin-top: 10px;
+      max-height: 260px;
+      overflow-y: auto;
+      border: 2px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+    }
+    .cal-opt {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      padding: 11px 14px;
+      font-size: 14px;
+      color: var(--text);
+      text-align: left;
+      background: #fff;
+      border: none;
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+    }
+    .cal-opt:last-child { border-bottom: none; }
+    .cal-opt:hover { background: #f1f8f4; }
+    .cal-opt small { display: block; color: var(--sub); font-size: 12px; margin-top: 2px; }
+    .cal-opt .per { flex-shrink: 0; color: var(--warn); font-weight: bold; font-size: 13px; }
+    .cal-note { padding: 12px 14px; color: var(--sub); font-size: 13px; }
+    #picked {
+      display: none;
+      margin-top: 10px;
+      padding: 12px 14px;
+      background: var(--warn-bg);
+      border-radius: 16px;
+      font-size: 14px;
+    }
+    #picked .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    #pickedName { font-weight: bold; word-break: break-all; }
+    #clearPick {
+      flex-shrink: 0;
+      padding: 2px 8px;
+      font-size: 13px;
+      color: var(--sub);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+    .amount-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .amount-row input { width: 110px; margin-top: 0; padding: 10px 12px; }
+    #kcalTotal { margin-left: auto; font-size: 17px; font-weight: bold; color: var(--warn); }
+
+    /* 목록 */
+    h2 { font-size: 22px; margin: 0 0 16px; }
+    #list { list-style: none; margin: 0; padding: 0; }
+    #list > li { margin-bottom: 12px; }
+    .item {
+      padding: 12px 16px;
+      background: #fafdfb;
+      border: 2px solid var(--line);
+      border-radius: 18px;
+    }
+    .children { margin: 8px 0 0 14px; }
+    .children .item { margin-bottom: 8px; background: #fff; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .food-name { font-weight: bold; word-break: break-all; }
+    .food-date { font-size: 13px; color: var(--sub); margin-top: 2px; }
+    .food-kcal { font-size: 13px; color: var(--warn); margin-top: 2px; }
+    .badge {
+      flex-shrink: 0;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--ok-bg);
+      color: var(--ok);
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .badge.soon { background: var(--warn-bg); color: var(--warn); }
+    .badge.over { background: var(--error-bg); color: var(--error); }
+    .badge.urgent { background: var(--red); color: #fff; }
+
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+    .mini {
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--ok);
+      background: var(--ok-bg);
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .mini:hover { filter: brightness(0.96); }
+    .mini:disabled { opacity: 0.5; cursor: default; }
+    .mini.del { color: var(--error); background: var(--error-bg); }
+    .mini.solid { color: #fff; background: var(--main); }
+    .mini.solid.del { background: var(--red); }
+    .mini.menu { margin-right: auto; font-size: 15px; }
+    .mini.menu .cnt {
+      display: inline-block;
+      min-width: 18px;
+      margin-left: 4px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: var(--main);
+      color: #fff;
+      font-size: 12px;
+      text-align: center;
+    }
+    .ask { font-size: 13px; color: var(--error); font-weight: bold; }
+    .edit-label { margin-top: 10px; font-size: 13px; }
+    .edit-err { margin-top: 8px; font-size: 13px; color: var(--error); }
+    #empty { color: var(--sub); font-size: 14px; text-align: center; margin: 8px 0 0; }
+    #listMsg { margin: 0 0 14px; }
+
+    /* 설정 (처음 연결) */
+    .tab.gear { flex: 0 0 auto; padding: 11px 14px; }
+    #setup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      overflow-y: auto;
+      padding: max(40px, env(safe-area-inset-top)) 16px 40px;
+      background: var(--bg);
+    }
+    #setup .card { max-width: 420px; margin: 0 auto; }
+    #setup .steps { margin: 12px 0 0; padding-left: 20px; color: var(--sub); font-size: 14px; line-height: 1.6; }
+    #setupCancel {
+      width: 100%;
+      margin-top: 10px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: bold;
+      color: var(--sub);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+    #setupSave {
+      width: 100%;
+      margin-top: 24px;
+      padding: 15px;
+      font-size: 17px;
+      font-weight: bold;
+      color: #fff;
+      background: var(--main);
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    #setupSave:disabled { background: #a9d4c3; cursor: default; }
+  </style>
+</head>
+<body>
+  <!-- 처음 한 번: Apps Script 주소 연결 -->
+  <div id="setup">
+    <div class="card">
+      <h1>🔗 시트 연결</h1>
+      <p class="desc">처음 한 번만 하면 돼요. 이 휴대폰에만 저장돼요.</p>
+      <ol class="steps">
+        <li>Apps Script → 배포 → 배포 관리</li>
+        <li>웹 앱 URL(…/exec)을 복사해 아래에 붙여 넣기</li>
+      </ol>
+
+      <label for="setupUrl">웹 앱 주소 <span class="req">필수</span></label>
+      <input type="url" id="setupUrl" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" autocorrect="off" spellcheck="false">
+
+      <label for="setupPw">비밀번호 <span class="req opt">설정했다면</span></label>
+      <input type="password" id="setupPw" placeholder="APP_PASSWORD 에 넣은 값" autocomplete="current-password">
+
+      <button id="setupSave" onclick="onSetupSave()">연결</button>
+      <button id="setupCancel" onclick="closeSetup()">닫기</button>
+      <div id="setupMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="tabs">
+      <button class="tab active" id="tab0" onclick="goTo(0)">✏️ 입력</button>
+      <button class="tab" id="tab1" onclick="goTo(1)">📋 목록</button>
+      <button class="tab gear" onclick="openSetup()" title="연결 설정" aria-label="연결 설정">⚙️</button>
+    </div>
+
+    <div class="slider" id="slider">
+      <!-- 첫째 칸: 입력 -->
+      <div class="panel">
+        <div class="card">
+          <h1>🥛 음식 유통기한 입력</h1>
+          <p class="desc">한 번만 적어 두면 시트가 날짜를 챙겨 줘요.</p>
+
+          <label for="foodName">음식명 <span class="req">필수</span></label>
+          <div class="cal-row">
+            <input type="text" id="foodName" placeholder="예: 우유">
+            <button type="button" id="calBtn" onclick="onCalSearch()">🔍 칼로리</button>
+          </div>
+          <div id="calResults"></div>
+          <div id="picked">
+            <div class="head">
+              <span id="pickedName"></span>
+              <button type="button" id="clearPick" onclick="clearPick()">✕ 빼기</button>
+            </div>
+            <div class="amount-row">
+              <input type="number" id="amount" min="0" step="any" inputmode="decimal" oninput="updateKcal()">
+              <span id="amountUnit">g</span>
+              <span id="kcalTotal"></span>
+            </div>
+          </div>
+
+          <label for="expiryDate">유통기한 <span class="req">필수</span></label>
+          <input type="date" id="expiryDate">
+
+          <button id="saveBtn" onclick="onSave()">저장</button>
+          <div id="msg" class="msg"></div>
+          <p class="hint">옆으로 밀면 목록이 나와요 ›</p>
+        </div>
+      </div>
+
+      <!-- 둘째 칸: 목록 -->
+      <div class="panel">
+        <div class="card">
+          <h2>📋 목록</h2>
+          <div id="listMsg" class="msg"></div>
+          <ul id="list"></ul>
+          <p id="empty">불러오는 중...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- 서버(Apps Script) 연결 ----------
+     * 원래 화면은 google.script.run 으로 서버를 불렀어요.
+     * 아이폰 앱에서는 같은 모양으로 쓸 수 있게, 그 호출을 fetch 로 바꿔 보내 줍니다.
+     */
+    var STORE_URL = 'foodApp.url';
+    var STORE_PW = 'foodApp.pw';
+
+    function getStored(k) {
+      try { return localStorage.getItem(k) || ''; } catch (e) { return ''; }
+    }
+    function setStored(k, v) {
+      try { localStorage.setItem(k, v); } catch (e) {}
+    }
+
+    function callServer(action, args, url, pw) {
+      url = url || getStored(STORE_URL);
+      pw = pw === undefined ? getStored(STORE_PW) : pw;
+      if (!url) {
+        openSetup();
+        return Promise.reject(new Error('연결 안 됨'));
+      }
+      // text/plain 으로 보내야 Apps Script 가 막지 않아요
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: action, args: args, password: pw })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          if (res.auth === false) {
+            openSetup(res.message);
+            throw new Error(res.message);
+          }
+          if (!res.ok) throw new Error(res.message || '서버 오류');
+          return res.data;
+        });
+    }
+
+    function makeRunner(onOk, onFail) {
+      return {
+        withSuccessHandler: function (h) { return makeRunner(h, onFail); },
+        withFailureHandler: function (h) { return makeRunner(onOk, h); },
+        getFoods: function () { return send('getFoods', arguments); },
+        saveFood: function () { return send('saveFood', arguments); },
+        updateFood: function () { return send('updateFood', arguments); },
+        deleteFood: function () { return send('deleteFood', arguments); },
+        searchCalories: function () { return send('searchCalories', arguments); }
+      };
+      function send(action, args) {
+        callServer(action, Array.prototype.slice.call(args))
+          .then(function (data) { if (onOk) onOk(data); })
+          .catch(function (err) { if (onFail) onFail(err); });
+      }
+    }
+    var google = { script: {} };
+    Object.defineProperty(google.script, 'run', { get: function () { return makeRunner(null, null); } });
+
+    /* ---------- 설정 화면 ---------- */
+    function openSetup(message) {
+      document.getElementById('setupUrl').value = getStored(STORE_URL);
+      document.getElementById('setupPw').value = getStored(STORE_PW);
+      document.getElementById('setupCancel').style.display = getStored(STORE_URL) ? 'block' : 'none';
+      var box = document.getElementById('setupMsg');
+      if (message) showMessage('setupMsg', message, true); else box.className = 'msg';
+      document.getElementById('setup').style.display = 'block';
+    }
+
+    function closeSetup() {
+      document.getElementById('setup').style.display = 'none';
+    }
+
+    function onSetupSave() {
+      var url = document.getElementById('setupUrl').value.trim();
+      var pw = document.getElementById('setupPw').value;
+      if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec\/?$/.test(url)) {
+        showMessage('setupMsg', '주소는 https://script.google.com/macros/s/…/exec 모양이어야 해요.', true);
+        return;
+      }
+      var btn = document.getElementById('setupSave');
+      btn.disabled = true;
+      showMessage('setupMsg', '연결하는 중...', false);
+      callServer('ping', [], url, pw)
+        .then(function () {
+          setStored(STORE_URL, url);
+          setStored(STORE_PW, pw);
+          btn.disabled = false;
+          closeSetup();
+          loadList();
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          var m = String(err && err.message || '');
+          if (/비밀번호/.test(m)) showMessage('setupMsg', m, true);
+          else showMessage('setupMsg', '연결하지 못했어요. 주소와, Code.gs 를 새 버전으로 배포했는지 확인해 주세요.', true);
+        });
+    }
+
+    var slider = document.getElementById('slider');
+    var current = 0;
+
+    // 목록 화면의 상태
+    var foods = [];          // 시트에서 읽어 온 목록
+    var expanded = {};       // 펼쳐 둔 같은 이름 묶음
+    var editingRow = null;   // 수정 중인 줄 번호
+    var draft = { name: '', expiry: '' };
+    var editError = '';
+    var confirmRow = null;   // 삭제 확인 중인 줄 번호
+    var busy = false;
+
+    // 칼로리 검색에서 고른 음식
+    var picked = null;       // { name, maker, kcal, base, unit }
+
+    /* ---------- 탭 / 옆으로 넘기기 ---------- */
+    function goTo(i) {
+      slider.scrollTo({ left: i * slider.clientWidth, behavior: 'smooth' });
+    }
+
+    function setActive(i) {
+      document.getElementById('tab0').className = 'tab' + (i === 0 ? ' active' : '');
+      document.getElementById('tab1').className = 'tab' + (i === 1 ? ' active' : '');
+      if (i === 1 && current !== 1) loadList();
+      current = i;
+    }
+
+    slider.addEventListener('scroll', function () {
+      var i = Math.round(slider.scrollLeft / slider.clientWidth);
+      if (i !== current) setActive(i);
+    });
+
+    /* ---------- 공통 도우미 ---------- */
+    function el(tag, cls, text) {
+      var e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text !== undefined) e.textContent = text;
+      return e;
+    }
+
+    function showMessage(id, text, isError) {
+      var box = document.getElementById(id);
+      box.textContent = text;
+      box.className = 'msg ' + (isError ? 'error' : 'success');
+    }
+
+    // 같은 이름인지 비교할 때 띄어쓰기와 대소문자는 무시합니다
+    function normName(s) {
+      return String(s).replace(/\s/g, '').toLowerCase();
+    }
+
+    // 남은 날 수를 글자와 색으로 바꿉니다 (D-1, D-day는 빨강)
+    function ddayInfo(d) {
+      if (d === null) return { text: '-', cls: '' };
+      if (d < 0) return { text: '지남 ' + Math.abs(d) + '일', cls: 'over' };
+      if (d === 0) return { text: 'D-day', cls: 'urgent' };
+      if (d === 1) return { text: 'D-1', cls: 'urgent' };
+      if (d <= 3) return { text: 'D-' + d, cls: 'soon' };
+      return { text: 'D-' + d, cls: '' };
+    }
+
+    /* ---------- 칼로리 검색 ---------- */
+    function onCalSearch() {
+      var q = document.getElementById('foodName').value.trim();
+      var box = document.getElementById('calResults');
+      if (!q) { showMessage('msg', '칼로리를 찾을 음식명을 먼저 입력해 주세요.', true); return; }
+
+      var btn = document.getElementById('calBtn');
+      btn.disabled = true;
+      box.innerHTML = '';
+      box.appendChild(el('div', 'cal-note', '찾는 중...'));
+      box.style.display = 'block';
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          btn.disabled = false;
+          box.innerHTML = '';
+          if (!res.ok) { box.appendChild(el('div', 'cal-note', res.message)); return; }
+          if (!res.items.length) {
+            box.appendChild(el('div', 'cal-note', '검색 결과가 없어요. 이름을 짧게 바꿔 보세요. (예: 서울우유 → 우유)'));
+            return;
+          }
+          res.items.forEach(function (it) {
+            var b = el('button', 'cal-opt');
+            b.type = 'button';
+            var left = el('span');
+            left.appendChild(el('span', '', it.name));
+            if (it.maker) left.appendChild(el('small', '', it.maker));
+            b.appendChild(left);
+            b.appendChild(el('span', 'per', it.base + it.unit + '당 ' + it.kcal + 'kcal'));
+            b.onclick = function () { pickFood(it); };
+            box.appendChild(b);
+          });
+        })
+        .withFailureHandler(function () {
+          btn.disabled = false;
+          box.innerHTML = '';
+          box.appendChild(el('div', 'cal-note', '칼로리 검색에 실패했어요. 잠시 후 다시 시도해 주세요.'));
+        })
+        .searchCalories(q);
+    }
+
+    function pickFood(it) {
+      picked = it;
+      document.getElementById('calResults').style.display = 'none';
+      document.getElementById('pickedName').textContent =
+        it.name + ' · ' + it.base + it.unit + '당 ' + it.kcal + 'kcal';
+      document.getElementById('amount').value = it.base;
+      document.getElementById('amountUnit').textContent = it.unit + ' 먹으면';
+      document.getElementById('picked').style.display = 'block';
+      updateKcal();
+    }
+
+    function clearPick() {
+      picked = null;
+      document.getElementById('picked').style.display = 'none';
+      document.getElementById('calResults').style.display = 'none';
+    }
+
+    function currentAmount() {
+      var a = parseFloat(document.getElementById('amount').value);
+      return a > 0 ? a : picked.base;
+    }
+
+    function calcKcal() {
+      if (!picked) return null;
+      return Math.round(picked.kcal * currentAmount() / picked.base);
+    }
+
+    function updateKcal() {
+      var k = calcKcal();
+      document.getElementById('kcalTotal').textContent = k === null ? '' : '= ' + k + ' kcal';
+    }
+
+    /* ---------- 목록 그리기 ---------- */
+    function makeItem(f, childCount, key) {
+      var item = el('div', 'item');
+
+      // 수정 중이면 입력칸으로 바뀝니다
+      if (editingRow === f.row) {
+        item.appendChild(el('label', 'edit-label', '음식명'));
+        var nameIn = document.createElement('input');
+        nameIn.type = 'text';
+        nameIn.value = draft.name;
+        nameIn.oninput = function () { draft.name = nameIn.value; };
+        item.appendChild(nameIn);
+
+        item.appendChild(el('label', 'edit-label', '유통기한'));
+        var dateIn = document.createElement('input');
+        dateIn.type = 'date';
+        dateIn.value = draft.expiry;
+        dateIn.oninput = function () { draft.expiry = dateIn.value; };
+        item.appendChild(dateIn);
+
+        if (editError) item.appendChild(el('div', 'edit-err', editError));
+
+        var act = el('div', 'actions');
+        var saveB = el('button', 'mini solid', '저장');
+        saveB.disabled = busy;
+        saveB.onclick = function () { saveEdit(f); };
+        var cancelB = el('button', 'mini', '취소');
+        cancelB.onclick = function () { editingRow = null; editError = ''; renderList(); };
+        act.appendChild(saveB);
+        act.appendChild(cancelB);
+        item.appendChild(act);
+        return item;
+      }
+
+      // 평소 모습
+      var top = el('div', 'top');
+      var left = el('div');
+      left.appendChild(el('div', 'food-name', f.name));
+      left.appendChild(el('div', 'food-date', '유통기한 ' + f.expiry));
+      if (f.kcal !== null && f.kcal !== undefined) {
+        left.appendChild(el('div', 'food-kcal', '🔥 ' + f.kcal + ' kcal' + (f.calNote ? ' · ' + f.calNote : '')));
+      }
+      var info = ddayInfo(f.dday);
+      top.appendChild(left);
+      top.appendChild(el('div', 'badge ' + info.cls, info.text));
+      item.appendChild(top);
+
+      var actions = el('div', 'actions');
+
+      // 같은 이름이 더 있으면 3선(≡) 버튼
+      if (childCount > 0) {
+        var menu = el('button', 'mini menu', '≡');
+        menu.title = '같은 이름 ' + childCount + '개 더 보기';
+        menu.appendChild(el('span', 'cnt', String(childCount)));
+        menu.onclick = function () { expanded[key] = !expanded[key]; renderList(); };
+        actions.appendChild(menu);
+      }
+
+      if (confirmRow === f.row) {
+        actions.appendChild(el('span', 'ask', '정말 삭제할까요?'));
+        var yes = el('button', 'mini solid del', '삭제');
+        yes.disabled = busy;
+        yes.onclick = function () { doDelete(f); };
+        var no = el('button', 'mini', '취소');
+        no.onclick = function () { confirmRow = null; renderList(); };
+        actions.appendChild(yes);
+        actions.appendChild(no);
+      } else {
+        var editB = el('button', 'mini', '수정');
+        editB.onclick = function () {
+          editingRow = f.row;
+          draft = { name: f.name, expiry: f.expiry };
+          editError = '';
+          confirmRow = null;
+          renderList();
+        };
+        var delB = el('button', 'mini del', '삭제');
+        delB.onclick = function () { confirmRow = f.row; editingRow = null; renderList(); };
+        actions.appendChild(editB);
+        actions.appendChild(delB);
+      }
+      item.appendChild(actions);
+      return item;
+    }
+
+    function renderList() {
+      var ul = document.getElementById('list');
+      var empty = document.getElementById('empty');
+      ul.innerHTML = '';
+
+      if (!foods || foods.length === 0) {
+        empty.textContent = '아직 저장된 음식이 없어요.';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      // 같은 이름끼리 묶습니다 (먼저 등록한 것이 맨 앞)
+      var groups = {};
+      var order = [];
+      foods.forEach(function (f) {
+        var k = normName(f.name);
+        if (!groups[k]) { groups[k] = []; order.push(k); }
+        groups[k].push(f);
+      });
+      order.reverse(); // 최근에 새로 생긴 이름이 위로
+
+      order.forEach(function (k) {
+        var items = groups[k];
+        var li = document.createElement('li');
+        li.appendChild(makeItem(items[0], items.length - 1, k));
+
+        if (items.length > 1 && expanded[k]) {
+          var box = el('div', 'children');
+          for (var i = 1; i < items.length; i++) {
+            box.appendChild(makeItem(items[i], 0, k));
+          }
+          li.appendChild(box);
+        }
+        ul.appendChild(li);
+      });
+    }
+
+    function loadList() {
+      google.script.run
+        .withSuccessHandler(function (list) { foods = list; renderList(); })
+        .withFailureHandler(function () {
+          var empty = document.getElementById('empty');
+          empty.textContent = '목록을 불러오지 못했어요. 다시 넘겨 보세요.';
+          empty.style.display = 'block';
+        })
+        .getFoods();
+    }
+
+    /* ---------- 수정 / 삭제 ---------- */
+    function saveEdit(f) {
+      if (busy) return;
+      var name = draft.name.trim();
+      if (!name) { editError = '음식명을 입력해 주세요.'; renderList(); return; }
+      if (!draft.expiry) { editError = '유통기한을 선택해 주세요.'; renderList(); return; }
+
+      busy = true;
+      renderList();
+      google.script.run
+        .withSuccessHandler(function (result) {
+          busy = false;
+          if (result.ok) {
+            editingRow = null;
+            editError = '';
+            showMessage('listMsg', result.message, false);
+            loadList();
+          } else {
+            editError = result.message;
+            renderList();
+          }
+        })
+        .withFailureHandler(function () {
+          busy = false;
+          editError = '수정에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+          renderList();
+        })
+        .updateFood(f.row, f.name, name, draft.expiry);
+    }
+
+    function doDelete(f) {
+      if (busy) return;
+      busy = true;
+      renderList();
+      google.script.run
+        .withSuccessHandler(function (result) {
+          busy = false;
+          confirmRow = null;
+          showMessage('listMsg', result.message, !result.ok);
+          loadList();
+        })
+        .withFailureHandler(function () {
+          busy = false;
+          confirmRow = null;
+          showMessage('listMsg', '삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.', true);
+          renderList();
+        })
+        .deleteFood(f.row, f.name);
+    }
+
+    /* ---------- 새 음식 저장 ---------- */
+    function onSave() {
+      var name = document.getElementById('foodName').value.trim();
+      var expiry = document.getElementById('expiryDate').value;
+
+      if (!name) { showMessage('msg', '음식명을 입력해 주세요.', true); return; }
+      if (!expiry) { showMessage('msg', '유통기한을 선택해 주세요.', true); return; }
+
+      var cal = null;
+      if (picked) {
+        cal = { kcal: calcKcal(), note: picked.name + ' ' + currentAmount() + picked.unit };
+      }
+
+      var btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      showMessage('msg', '저장 중입니다...', false);
+
+      google.script.run
+        .withSuccessHandler(function (result) {
+          btn.disabled = false;
+          showMessage('msg', result.message, !result.ok);
+          if (result.ok) {
+            document.getElementById('foodName').value = '';
+            document.getElementById('expiryDate').value = '';
+            clearPick();
+            loadList(); // 저장되면 목록 칸도 바로 새로 불러옵니다
+          }
+        })
+        .withFailureHandler(function () {
+          btn.disabled = false;
+          showMessage('msg', '저장에 실패했습니다. 잠시 후 다시 시도해 주세요.', true);
+        })
+        .saveFood(name, expiry, cal);
+    }
+
+    // 처음 열 때: 연결돼 있으면 목록을 불러오고, 아니면 연결 화면을 엽니다
+    if (getStored(STORE_URL)) loadList(); else openSetup();
+
+    // 오프라인에서도 화면이 열리도록 서비스 워커를 등록합니다
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    }
+  </script>
+</body>
+</html>
